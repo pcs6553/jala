@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Water Bill Calculator — Mathru Nilaya</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <span class="header-icon">💧</span>
+      <div>
+        <h1>Water Bill Calculator</h1>
+        <p class="header-sub">Mathru Nilaya</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Bill Entry Form -->
+    <section class="card" id="bill-form-section">
+      <h2 class="section-title">New Bill Entry</h2>
+
+      <form id="bill-form" novalidate>
+        <div class="form-grid">
+
+          <!-- Society Name (readonly) -->
+          <div class="field-group full-width">
+            <label for="society_name">Society Name</label>
+            <input type="text" id="society_name" name="society_name"
+                   value="Mathru Nilaya" readonly class="readonly-input" />
+          </div>
+
+          <!-- Tenant Name -->
+          <div class="field-group full-width">
+            <label for="tenant_name">Tenant Name <span class="required">*</span></label>
+            <input type="text" id="tenant_name" name="tenant_name"
+                   placeholder="Enter tenant name" autocomplete="off" required />
+          </div>
+
+          <!-- Flat / Unit -->
+          <div class="field-group">
+            <label for="flat_number">Flat / Unit <span class="required">*</span></label>
+            <select id="flat_number" name="flat_number" required>
+              <option value="">— Select —</option>
+              <option value="GND">GND</option>
+              <option value="F-1">F-1</option>
+              <option value="F-2">F-2</option>
+              <option value="F-3">F-3</option>
+              <option value="F-4">F-4</option>
+            </select>
+          </div>
+
+          <!-- Floor -->
+          <div class="field-group">
+            <label for="floor">Floor <span class="required">*</span></label>
+            <select id="floor" name="floor" required>
+              <option value="">— Select —</option>
+              <option value="Gnd Flr">Gnd Flr</option>
+              <option value="1st Flr">1st Flr</option>
+              <option value="2nd Flr">2nd Flr</option>
+              <option value="3rd Flr">3rd Flr</option>
+              <option value="4th Flr">4th Flr</option>
+            </select>
+          </div>
+
+          <!-- Meter Number -->
+          <div class="field-group">
+            <label for="meter_number">Meter Number <span class="required">*</span></label>
+            <input type="text" id="meter_number" name="meter_number"
+                   placeholder="e.g. MN-001" autocomplete="off" required />
+          </div>
+
+          <!-- Billing Month -->
+          <div class="field-group">
+            <label for="billing_month">Billing Month <span class="required">*</span></label>
+            <input type="month" id="billing_month" name="billing_month" required />
+          </div>
+
+          <!-- Last Reading -->
+          <div class="field-group">
+            <label for="last_reading">
+              Last Reading (L)
+              <span class="prefill-badge" id="prefill-badge" hidden>auto-filled</span>
+            </label>
+            <input type="number" id="last_reading" name="last_reading"
+                   placeholder="0" min="0" step="any" required />
+          </div>
+
+          <!-- Present Reading -->
+          <div class="field-group">
+            <label for="present_reading">Present Reading (L) <span class="required">*</span></label>
+            <input type="number" id="present_reading" name="present_reading"
+                   placeholder="0" min="0" step="any" required />
+          </div>
+
+          <!-- Rate per Unit -->
+          <div class="field-group">
+            <label for="rate_per_unit">Rate per Litre (₹) <span class="required">*</span></label>
+            <input type="number" id="rate_per_unit" name="rate_per_unit"
+                   placeholder="0.00" min="0.001" step="any" required />
+          </div>
+
+        </div><!-- /form-grid -->
+
+        <!-- Live Preview -->
+        <div class="preview-box" id="preview-box" hidden>
+          <div class="preview-row">
+            <span>Consumed</span>
+            <strong id="preview-units">— L</strong>
+          </div>
+          <div class="preview-row preview-total">
+            <span>Total Amount</span>
+            <strong id="preview-amount">₹ —</strong>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="error-msg" id="form-error" hidden></div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="clear-btn">Clear</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            Save Bill
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Bill History -->
+    <section class="card" id="history-section">
+      <div class="history-header">
+        <h2 class="section-title">Bill History</h2>
+        <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh">&#8635; Refresh</button>
+      </div>
+
+      <div id="history-loading" class="loading-msg">Loading…</div>
+      <div id="history-empty" class="empty-msg" hidden>No bills recorded yet.</div>
+
+      <div class="table-wrap" id="history-table-wrap" hidden>
+        <table class="bills-table" id="bills-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Month</th>
+              <th>Tenant</th>
+              <th>Flat</th>
+              <th>Meter</th>
+              <th class="num-col">Last (L)</th>
+              <th class="num-col">Present (L)</th>
+              <th class="num-col">Units (L)</th>
+              <th class="num-col">Rate (₹)</th>
+              <th class="num-col">Amount (₹)</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody id="bills-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Mathru Nilaya &mdash; Water Billing System</p>
+  </footer>
+
+  <!-- jsPDF from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+          integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfkEjjEuX89Q=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
