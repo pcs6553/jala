@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💧 Water Bill Calculator — Mathru Nilaya
+# 💧 Water Bill Calculator
 
 A self-contained web app to calculate monthly water-consumption bills from meter readings, store them in a lightweight database, and generate professional PDF receipts — built with Flask + SQLite and a zero-build vanilla frontend, packaged to run anywhere with Docker.
 
