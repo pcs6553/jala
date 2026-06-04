@@ -4,6 +4,7 @@ BILL_FIELDS = (
     'tenant_name',
     'flat_number',
     'floor',
+    'mobile',
     'meter_number',
     'billing_month',
     'last_reading',
@@ -11,6 +12,7 @@ BILL_FIELDS = (
     'units_consumed',
     'rate_per_unit',
     'total_amount',
+    'remarks',
     'created_at',
 )
 

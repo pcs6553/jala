@@ -32,6 +32,7 @@ def init_db():
             tenant_name     TEXT    NOT NULL,
             flat_number     TEXT    NOT NULL,
             floor           TEXT    NOT NULL,
+            mobile          TEXT    DEFAULT '',
             meter_number    TEXT    NOT NULL,
             billing_month   TEXT    NOT NULL,
             last_reading    REAL    NOT NULL,
@@ -39,8 +40,16 @@ def init_db():
             units_consumed  REAL    NOT NULL,
             rate_per_unit   REAL    NOT NULL,
             total_amount    REAL    NOT NULL,
+            remarks         TEXT    DEFAULT '',
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Additive migration for databases created before mobile/remarks existed.
+    existing = {row[1] for row in db.execute('PRAGMA table_info(bills)').fetchall()}
+    for col in ('mobile', 'remarks'):
+        if col not in existing:
+            db.execute(f"ALTER TABLE bills ADD COLUMN {col} TEXT DEFAULT ''")
+
     db.commit()
     db.close()
