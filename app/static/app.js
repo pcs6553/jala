@@ -176,7 +176,7 @@ form.addEventListener('submit', async (e) => {
   }
 
   const payload = {
-    society_name:    document.getElementById('society_name').value,
+    society_name:    document.getElementById('society_name').value.trim(),
     tenant_name:     document.getElementById('tenant_name').value.trim(),
     flat_number:     document.getElementById('flat_number').value,
     floor:           document.getElementById('floor').value,
@@ -483,6 +483,7 @@ function openEditModal(b) {
   editError.hidden = true;
   setVal('e_id', b.id);
   document.getElementById('edit-id-label').textContent = '#' + b.id;
+  setVal('e_society_name',   b.society_name);
   setVal('e_tenant_name',    b.tenant_name);
   setVal('e_mobile',         b.mobile);
   setVal('e_flat_number',    b.flat_number || 'GND');
@@ -505,7 +506,7 @@ document.getElementById('edit-save').addEventListener('click', async () => {
   editError.hidden = true;
   const id = document.getElementById('e_id').value;
   const payload = {
-    society_name:    'Mathru Nilaya',
+    society_name:    document.getElementById('e_society_name').value.trim(),
     tenant_name:     document.getElementById('e_tenant_name').value.trim(),
     mobile:          document.getElementById('e_mobile').value.trim(),
     flat_number:     document.getElementById('e_flat_number').value,
@@ -743,7 +744,18 @@ function generatePDF(bill) {
 
   const filename = `WaterBill_${bill.meter_number}_${bill.billing_month || bill.id}.pdf`
     .replace(/[^a-zA-Z0-9_\-.]/g, '_');
-  doc.save(filename);
+  
+  if (window.Android && window.Android.savePdf) {
+    try {
+      const pdfBase64 = doc.output('datauristring');
+      window.Android.savePdf(filename, pdfBase64);
+    } catch (e) {
+      console.error('Failed to save PDF via Android bridge:', e);
+      doc.save(filename);
+    }
+  } else {
+    doc.save(filename);
+  }
 }
 
 // ── Indian number to words ─────────────────────────────────────────────────────

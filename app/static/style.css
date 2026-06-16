@@ -262,12 +262,6 @@ select {
   }
 }
 
-input.readonly-input {
-  background: #f0f4f8;
-  color: var(--text-muted);
-  cursor: default;
-}
-
 input.field-error,
 select.field-error {
   border-color: var(--red);
@@ -584,7 +578,7 @@ select.field-error {
 .main-area { display: contents; }   /* on mobile, behave as if wrapper isn't there */
 
 /* ── Responsive — desktop dashboard ≥1024px ───────────────────────── */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (hover: hover) {
   /* shell: sidebar + main area side by side */
   body {
     flex-direction: row;

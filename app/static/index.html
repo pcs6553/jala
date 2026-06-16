@@ -1,11 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    // Intercept fetch calls inside Android WebView
+    if (window.Android && window.Android.apiCall) {
+      const originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        let url = (typeof input === 'string') ? input : input.url;
+        
+        // Normalize URL if it is full URL pointing to virtual host
+        if (url.startsWith('https://appassets.androidplatform.net')) {
+          url = url.substring('https://appassets.androidplatform.net'.length);
+        } else if (url.startsWith('http://localhost:5000')) {
+          url = url.substring('http://localhost:5000'.length);
+        }
+        
+        if (url.startsWith('/api/')) {
+          const method = (init && init.method) ? init.method : 'GET';
+          let body = '';
+          if (init && init.body) {
+            body = (typeof init.body === 'string') ? init.body : JSON.stringify(init.body);
+          }
+          const headers = (init && init.headers) ? JSON.stringify(init.headers) : '{}';
+          
+          return new Promise((resolve, reject) => {
+            try {
+              const resStr = window.Android.apiCall(url, method, body, headers);
+              const res = JSON.parse(resStr);
+              
+              resolve(new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: new Headers(res.headers)
+              }));
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }
+        return originalFetch(input, init);
+      };
+    }
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Water Bill Calculator — Mathru Nilaya</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3S6 13.5 6 20.2A10 10 0 0 0 26 20.2C26 13.5 16 3 16 3Z' fill='%231a6fc4'/%3E%3Cpath d='M16.2 23c-2.9 0-5.3-2.2-5.3-5.1 2.9 0 5.3 2.2 5.3 5.1Z' fill='%2338b36b'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="static/style.css" />
 </head>
 <body>
   <!-- Mobile top header (hidden on desktop) -->
@@ -107,9 +148,9 @@
             <div class="form-grid">
 
               <div class="field-group full-width">
-                <label for="society_name">Society Name</label>
+                <label for="society_name">Society Name <span class="required">*</span></label>
                 <input type="text" id="society_name" name="society_name"
-                       value="Mathru Nilaya" readonly class="readonly-input" />
+                       placeholder="Enter society name" autocomplete="off" required />
               </div>
 
               <div class="field-group">
@@ -352,6 +393,11 @@
         <form id="edit-form" class="form-grid" novalidate>
           <input type="hidden" id="e_id" />
 
+          <div class="field-group full-width">
+            <label for="e_society_name">Society Name <span class="required">*</span></label>
+            <input type="text" id="e_society_name" required />
+          </div>
+
           <div class="field-group">
             <label for="e_tenant_name">Tenant Name <span class="required">*</span></label>
             <input type="text" id="e_tenant_name" required />
@@ -425,7 +471,7 @@
   <div id="toast"></div>
 
   <!-- jsPDF bundled locally (works offline) -->
-  <script src="/static/vendor/jspdf.umd.min.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="static/vendor/jspdf.umd.min.js"></script>
+  <script src="static/app.js"></script>
 </body>
 </html>
