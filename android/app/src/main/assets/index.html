@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Intercept fetch calls inside Android WebView
+    if (window.Android && window.Android.apiCall) {
+      const originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        let url = (typeof input === 'string') ? input : input.url;
+        
+        // Normalize URL if it is full URL pointing to virtual host
+        if (url.startsWith('https://appassets.androidplatform.net')) {
+          url = url.substring('https://appassets.androidplatform.net'.length);
+        } else if (url.startsWith('http://localhost:5000')) {
+          url = url.substring('http://localhost:5000'.length);
+        }
+        
+        if (url.startsWith('/api/')) {
+          const method = (init && init.method) ? init.method : 'GET';
+          let body = '';
+          if (init && init.body) {
+            body = (typeof init.body === 'string') ? init.body : JSON.stringify(init.body);
+          }
+          const headers = (init && init.headers) ? JSON.stringify(init.headers) : '{}';
+          
+          return new Promise((resolve, reject) => {
+            try {
+              const resStr = window.Android.apiCall(url, method, body, headers);
+              const res = JSON.parse(resStr);
+              
+              resolve(new Response(res.body, {
+                status: res.status,
+                statusText: res.statusText,
+                headers: new Headers(res.headers)
+              }));
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }
+        return originalFetch(input, init);
+      };
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Water Bill Calculator — Mathru Nilaya</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3S6 13.5 6 20.2A10 10 0 0 0 26 20.2C26 13.5 16 3 16 3Z' fill='%231a6fc4'/%3E%3Cpath d='M16.2 23c-2.9 0-5.3-2.2-5.3-5.1 2.9 0 5.3 2.2 5.3 5.1Z' fill='%2338b36b'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+  <!-- Mobile top header (hidden on desktop) -->
+  <header class="app-header">
+    <div class="header-inner">
+      <span class="header-icon">
+        <svg class="wlogo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M16 3S6 13.5 6 20.2A10 10 0 0 0 26 20.2C26 13.5 16 3 16 3Z" fill="currentColor"/>
+          <path d="M16.2 23c-2.9 0-5.3-2.2-5.3-5.1 2.9 0 5.3 2.2 5.3 5.1Z" fill="#38b36b"/>
+          <path d="M16.2 23c.9-2.6 3-4.1 5.3-4.1-.6 2.5-2.7 4.1-5.3 4.1Z" fill="#57c98a"/>
+        </svg>
+      </span>
+      <div>
+        <h1>Water Bill Calculator</h1>
+        <p class="header-sub">Mathru Nilaya</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile tab bar (hidden on desktop) -->
+  <nav class="mobile-tabs">
+    <button class="mtab active" data-view="dashboard">Dashboard</button>
+    <button class="mtab" data-view="history">Bill History</button>
+    <button class="mtab" data-view="admin">Admin</button>
+  </nav>
+
+  <!-- Desktop sidebar (hidden on mobile) -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-logo">
+        <svg class="wlogo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M16 3S6 13.5 6 20.2A10 10 0 0 0 26 20.2C26 13.5 16 3 16 3Z" fill="currentColor"/>
+          <path d="M16.2 23c-2.9 0-5.3-2.2-5.3-5.1 2.9 0 5.3 2.2 5.3 5.1Z" fill="#38b36b"/>
+          <path d="M16.2 23c.9-2.6 3-4.1 5.3-4.1-.6 2.5-2.7 4.1-5.3 4.1Z" fill="#57c98a"/>
+        </svg>
+      </span>
+      <div>
+        <strong>Water Bill</strong>
+        <span class="sidebar-sub">Mathru Nilaya</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard">
+        <span class="nav-ico">▦</span> Dashboard
+      </a>
+      <a href="#" class="nav-item" data-view="history">
+        <span class="nav-ico">▤</span> Bill History
+      </a>
+      <a href="#" class="nav-item" data-view="admin">
+        <span class="nav-ico">⚙</span> Admin
+      </a>
+    </nav>
+    <div class="sidebar-foot">Water Billing System<br/>v1.0</div>
+  </aside>
+
+  <div class="main-area">
+
+    <!-- Desktop top bar (hidden on mobile) -->
+    <div class="topbar">
+      <div>
+        <h1 class="topbar-title" id="topbar-title">Dashboard</h1>
+        <p class="topbar-sub" id="topbar-sub">Create a new water bill entry</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="topbar-refresh" title="Refresh">&#8635; Refresh</button>
+    </div>
+
+    <main class="container">
+
+      <!-- ════════════════════ DASHBOARD VIEW ════════════════════ -->
+      <div class="view view-active" id="view-dashboard">
+
+        <!-- Summary stats (desktop) -->
+        <section class="stats-row">
+          <div class="stat-card">
+            <span class="stat-ico">🧾</span>
+            <div><span class="stat-label">Total Bills</span><span class="stat-value" id="stat-bills">0</span></div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-ico">💧</span>
+            <div><span class="stat-label">Units Billed</span><span class="stat-value" id="stat-units">0 L</span></div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-ico">₹</span>
+            <div><span class="stat-label">Total Billed</span><span class="stat-value" id="stat-amount">₹ 0</span></div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-ico">⏱️</span>
+            <div><span class="stat-label">Meters Tracked</span><span class="stat-value" id="stat-meters">0</span></div>
+          </div>
+        </section>
+
+        <div class="dash-grid">
+
+        <!-- Bill Entry Form -->
+        <section class="card" id="bill-form-section">
+          <h2 class="section-title">📋 New Bill Entry</h2>
+
+          <form id="bill-form" novalidate>
+            <div class="form-grid">
+
+              <div class="field-group full-width">
+                <label for="society_name">Society Name <span class="required">*</span></label>
+                <input type="text" id="society_name" name="society_name"
+                       placeholder="Enter society name" autocomplete="off" required />
+              </div>
+
+              <div class="field-group">
+                <label for="tenant_name">Tenant Name <span class="required">*</span></label>
+                <input type="text" id="tenant_name" name="tenant_name"
+                       placeholder="Enter tenant name" autocomplete="off" required />
+              </div>
+
+              <div class="field-group">
+                <label for="mobile">Mobile No.</label>
+                <input type="tel" id="mobile" name="mobile"
+                       placeholder="e.g. 98XXXXXXXX" autocomplete="off"
+                       inputmode="numeric" pattern="[0-9 +\-]*" />
+              </div>
+
+              <div class="field-group">
+                <label for="flat_number">Flat / Unit <span class="required">*</span></label>
+                <select id="flat_number" name="flat_number" required>
+                  <option value="">— Select —</option>
+                  <option value="GND">GND</option>
+                  <option value="F-1">F-1</option>
+                  <option value="F-2">F-2</option>
+                  <option value="F-3">F-3</option>
+                  <option value="F-4">F-4</option>
+                </select>
+              </div>
+
+              <div class="field-group">
+                <label for="floor">Floor <span class="required">*</span></label>
+                <select id="floor" name="floor" required>
+                  <option value="">— Select —</option>
+                  <option value="Gnd Flr">Gnd Flr</option>
+                  <option value="1st Flr">1st Flr</option>
+                  <option value="2nd Flr">2nd Flr</option>
+                  <option value="3rd Flr">3rd Flr</option>
+                  <option value="4th Flr">4th Flr</option>
+                </select>
+              </div>
+
+              <div class="field-group">
+                <label for="meter_number">Meter Number <span class="required">*</span></label>
+                <input type="text" id="meter_number" name="meter_number"
+                       placeholder="e.g. MN-001" autocomplete="off" required />
+              </div>
+
+              <div class="field-group">
+                <label for="billing_month">Billing Month <span class="required">*</span></label>
+                <input type="month" id="billing_month" name="billing_month" required />
+              </div>
+
+              <div class="field-group">
+                <label for="last_reading">
+                  Last Reading (L)
+                  <span class="prefill-badge" id="prefill-badge" hidden>auto-filled</span>
+                </label>
+                <input type="number" id="last_reading" name="last_reading"
+                       placeholder="0" min="0" step="any" required />
+              </div>
+
+              <div class="field-group">
+                <label for="present_reading">Present Reading (L) <span class="required">*</span></label>
+                <input type="number" id="present_reading" name="present_reading"
+                       placeholder="0" min="0" step="any" required />
+              </div>
+
+              <div class="field-group full-width">
+                <label for="rate_per_unit">Rate per Litre (₹) <span class="required">*</span></label>
+                <input type="number" id="rate_per_unit" name="rate_per_unit"
+                       value="0.70" placeholder="0.00" min="0.001" step="any" required />
+                <div class="rate-presets" id="rate-presets">
+                  <button type="button" class="rate-chip" data-rate="0.50">50p</button>
+                  <button type="button" class="rate-chip" data-rate="0.70">70p</button>
+                  <button type="button" class="rate-chip" data-rate="1.00">₹1</button>
+                  <button type="button" class="rate-chip" data-rate="1.50">₹1.50</button>
+                  <button type="button" class="rate-chip" data-rate="2.00">₹2</button>
+                </div>
+              </div>
+
+            </div><!-- /form-grid -->
+
+            <div class="field-group full-width remarks-group">
+              <label for="remarks">Remarks / Notes <span class="optional">(optional)</span></label>
+              <textarea id="remarks" name="remarks" rows="2"
+                        placeholder="Any notes, extra charges, or instructions…"></textarea>
+            </div>
+
+            <div class="error-msg" id="form-error" hidden></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="clear-btn">Clear</button>
+              <button type="submit" class="btn btn-primary" id="submit-btn">⚡ Save Bill</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Live Preview panel -->
+        <aside class="card preview-panel" id="preview-panel">
+          <h2 class="section-title">📊 Live Preview</h2>
+
+          <div class="preview-empty" id="preview-empty">
+            <div class="icon">💧</div>
+            <p>Fill in the readings and rate to see a live calculation.</p>
+          </div>
+
+          <div class="preview-content" id="preview-box" hidden>
+            <div class="pv-stat">
+              <div class="pv-label">Units Consumed</div>
+              <div class="pv-value" id="preview-units">— L</div>
+              <div class="usage-meter" id="usage-meter"><div class="usage-bar" id="usage-bar"></div></div>
+              <div class="usage-scale"><span>0 L</span><span id="usage-label">—</span><span>5,000 L</span></div>
+            </div>
+            <div class="pv-stat">
+              <div class="pv-label">Total Amount</div>
+              <div class="pv-value amount" id="preview-amount">₹ —</div>
+            </div>
+            <div class="pv-detail">
+              <table>
+                <tr><td>Rate / Litre</td><td id="pv-rate">—</td></tr>
+                <tr><td>Last Reading</td><td id="pv-last">—</td></tr>
+                <tr><td>Present Reading</td><td id="pv-present">—</td></tr>
+              </table>
+            </div>
+          </div>
+        </aside>
+
+        </div><!-- /dash-grid -->
+      </div><!-- /view-dashboard -->
+
+      <!-- ════════════════════ BILL HISTORY VIEW ════════════════════ -->
+      <div class="view" id="view-history">
+        <section class="card" id="history-section">
+          <div class="history-header">
+            <h2 class="section-title">🧾 Bill History</h2>
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh">&#8635; Refresh</button>
+          </div>
+
+          <div id="history-loading" class="loading-msg">Loading…</div>
+          <div id="history-empty" class="empty-msg" hidden>No bills recorded yet.</div>
+
+          <div class="table-wrap" id="history-table-wrap" hidden>
+            <table class="bills-table" id="bills-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Month</th>
+                  <th>Tenant</th>
+                  <th>Flat</th>
+                  <th>Meter</th>
+                  <th class="num-col">Last (L)</th>
+                  <th class="num-col">Present (L)</th>
+                  <th class="num-col">Units (L)</th>
+                  <th class="num-col">Rate (₹)</th>
+                  <th class="num-col">Amount (₹)</th>
+                  <th>PDF</th>
+                </tr>
+              </thead>
+              <tbody id="bills-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div><!-- /view-history -->
+
+      <!-- ════════════════════ ADMIN VIEW ════════════════════ -->
+      <div class="view" id="view-admin">
+
+        <!-- Login gate -->
+        <section class="card admin-login-card" id="admin-login">
+          <h2 class="section-title">🔒 Admin Login</h2>
+          <form id="admin-login-form" class="admin-login-form" autocomplete="on">
+            <div class="field-group">
+              <label for="admin-user">Username</label>
+              <input type="text" id="admin-user" name="username" autocomplete="username"
+                     placeholder="Username" required />
+            </div>
+            <div class="field-group">
+              <label for="admin-pass">Password</label>
+              <input type="password" id="admin-pass" name="password" autocomplete="current-password"
+                     placeholder="Password" required />
+            </div>
+            <div class="error-msg" id="admin-login-error" hidden></div>
+            <button type="submit" class="btn btn-primary" id="admin-login-btn">Sign In</button>
+          </form>
+        </section>
+
+        <!-- Admin content (shown only after login) -->
+        <section class="card" id="admin-section" hidden>
+          <div class="history-header">
+            <h2 class="section-title">Admin — Database</h2>
+            <div class="admin-head-actions">
+              <button class="btn btn-ghost btn-sm" id="admin-refresh" title="Refresh">&#8635; Refresh</button>
+              <button class="btn btn-secondary btn-sm" id="admin-logout" title="Log out">Logout</button>
+            </div>
+          </div>
+          <p class="admin-note">View, edit, or delete any saved entry. Edits recalculate units &amp; total automatically.</p>
+
+          <div id="admin-loading" class="loading-msg">Loading…</div>
+          <div id="admin-empty" class="empty-msg" hidden>No entries in the database.</div>
+
+          <div class="table-wrap" id="admin-table-wrap" hidden>
+            <table class="bills-table" id="admin-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Month</th>
+                  <th>Tenant</th>
+                  <th>Flat</th>
+                  <th>Floor</th>
+                  <th>Mobile</th>
+                  <th>Meter</th>
+                  <th class="num-col">Last</th>
+                  <th class="num-col">Present</th>
+                  <th class="num-col">Units</th>
+                  <th class="num-col">Rate</th>
+                  <th class="num-col">Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div><!-- /view-admin -->
+
+    </main>
+
+    <footer class="app-footer">
+      <p>Mathru Nilaya &mdash; Water Billing System</p>
+    </footer>
+
+  </div><!-- /main-area -->
+
+  <!-- ════════════════ Edit modal (Admin) ════════════════ -->
+  <div class="modal-overlay" id="edit-modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Edit Bill <span id="edit-id-label"></span></h3>
+        <button class="modal-x" id="edit-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-form" class="form-grid" novalidate>
+          <input type="hidden" id="e_id" />
+
+          <div class="field-group full-width">
+            <label for="e_society_name">Society Name <span class="required">*</span></label>
+            <input type="text" id="e_society_name" required />
+          </div>
+
+          <div class="field-group">
+            <label for="e_tenant_name">Tenant Name <span class="required">*</span></label>
+            <input type="text" id="e_tenant_name" required />
+          </div>
+          <div class="field-group">
+            <label for="e_mobile">Mobile No.</label>
+            <input type="tel" id="e_mobile" inputmode="numeric" pattern="[0-9 +\-]*" />
+          </div>
+
+          <div class="field-group">
+            <label for="e_flat_number">Flat / Unit <span class="required">*</span></label>
+            <select id="e_flat_number" required>
+              <option value="GND">GND</option>
+              <option value="F-1">F-1</option>
+              <option value="F-2">F-2</option>
+              <option value="F-3">F-3</option>
+              <option value="F-4">F-4</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="e_floor">Floor <span class="required">*</span></label>
+            <select id="e_floor" required>
+              <option value="Gnd Flr">Gnd Flr</option>
+              <option value="1st Flr">1st Flr</option>
+              <option value="2nd Flr">2nd Flr</option>
+              <option value="3rd Flr">3rd Flr</option>
+              <option value="4th Flr">4th Flr</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="e_meter_number">Meter Number <span class="required">*</span></label>
+            <input type="text" id="e_meter_number" required />
+          </div>
+          <div class="field-group">
+            <label for="e_billing_month">Billing Month <span class="required">*</span></label>
+            <input type="month" id="e_billing_month" required />
+          </div>
+
+          <div class="field-group">
+            <label for="e_last_reading">Last Reading (L) <span class="required">*</span></label>
+            <input type="number" id="e_last_reading" min="0" step="any" required />
+          </div>
+          <div class="field-group">
+            <label for="e_present_reading">Present Reading (L) <span class="required">*</span></label>
+            <input type="number" id="e_present_reading" min="0" step="any" required />
+          </div>
+
+          <div class="field-group full-width">
+            <label for="e_rate_per_unit">Rate per Litre (₹) <span class="required">*</span></label>
+            <input type="number" id="e_rate_per_unit" min="0.001" step="any" required />
+          </div>
+
+          <div class="field-group full-width">
+            <label for="e_remarks">Remarks / Notes <span class="optional">(optional)</span></label>
+            <textarea id="e_remarks" rows="2"></textarea>
+          </div>
+        </form>
+        <div class="error-msg" id="edit-error" hidden></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-danger" id="edit-delete" type="button">Delete</button>
+        <span class="modal-spacer"></span>
+        <button class="btn btn-secondary" id="edit-cancel" type="button">Cancel</button>
+        <button class="btn btn-primary" id="edit-save" type="button">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast"></div>
+
+  <!-- jsPDF bundled locally (works offline) -->
+  <script src="static/vendor/jspdf.umd.min.js"></script>
+  <script src="static/app.js"></script>
+</body>
+</html>
